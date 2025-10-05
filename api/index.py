@@ -1,87 +1,57 @@
-# api/index.py
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
-from typing import List, Dict
-import json
-import statistics
+import pandas as pd
+import numpy as np
+from pathlib import Path
 
 app = FastAPI()
 
-# Enable CORS for POST requests from any origin
+# Enable CORS for all origins
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
-    allow_credentials=False,
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["*"],
 )
 
-# Load telemetry data from the data file
-import os
-with open(os.path.join(os.path.dirname(__file__), "..", "q-vercel-latency.json"), "r") as f:
-    telemetry_data = json.load(f)
+# Load the dataset once when the app starts
+# The data file should be in the same directory as this script
+DATA_FILE = Path(__file__).parent / "q-vercel-latency.json"
+df = pd.read_json(DATA_FILE)
 
-class LatencyRequest(BaseModel):
-    regions: List[str]
-    threshold_ms: int
-
-class RegionMetrics(BaseModel):
-    avg_latency: float
-    p95_latency: float
-    avg_uptime: float
-    breaches: int
 
 @app.get("/")
-def read_root():
-    return {"message": "Hello, World!"}
+async def root():
+    return {"message": "Vercel Latency Analytics API is running."}
 
-@app.options("/latency-metrics")
-def options_latency_metrics():
-    return {"message": "OK"}
 
-@app.post("/latency-metrics")
-def get_latency_metrics(request: LatencyRequest) -> Dict[str, RegionMetrics]:
-    """
-    Calculate latency metrics for specified regions.
-    
-    Returns per-region metrics including:
-    - avg_latency: mean latency
-    - p95_latency: 95th percentile latency
-    - avg_uptime: mean uptime percentage
-    - breaches: count of records above threshold
-    """
-    results = {}
-    
-    for region in request.regions:
-        # Filter data for this region
-        region_data = [record for record in telemetry_data if record["region"] == region]
-        
-        if not region_data:
-            # If no data for region, return zeros
-            results[region] = RegionMetrics(
-                avg_latency=0.0,
-                p95_latency=0.0,
-                avg_uptime=0.0,
-                breaches=0
+@app.post("/api/")
+async def get_latency_stats(request: Request):
+    payload = await request.json()
+    regions_to_process = payload.get("regions", [])
+    threshold = payload.get("threshold_ms", 200)
+
+    results = []
+
+    for region in regions_to_process:
+        region_df = df[df["region"] == region]
+
+        if not region_df.empty:
+            avg_latency = round(region_df["latency_ms"].mean(), 2)
+            p95_latency = round(np.percentile(region_df["latency_ms"], 95), 2)
+            avg_uptime = round(region_df["uptime_pct"].mean(), 3)
+            breaches = int(region_df[region_df["latency_ms"] > threshold].shape[0])
+
+            results.append(
+                {
+                    "region": region,
+                    "avg_latency": avg_latency,
+                    "p95_latency": p95_latency,
+                    "avg_uptime": avg_uptime,
+                    "breaches": breaches,
+                }
             )
-            continue
-        
-        # Extract latencies and uptimes
-        latencies = [record["latency_ms"] for record in region_data]
-        uptimes = [record["uptime_pct"] for record in region_data]
-        
-        # Calculate metrics
-        avg_latency = statistics.mean(latencies)
-        p95_latency = statistics.quantiles(latencies, n=20)[18]  # 95th percentile (19th out of 20)
-        avg_uptime = statistics.mean(uptimes)
-        breaches = sum(1 for latency in latencies if latency > request.threshold_ms)
-        
-        results[region] = RegionMetrics(
-            avg_latency=round(avg_latency, 2),
-            p95_latency=round(p95_latency, 2),
-            avg_uptime=round(avg_uptime, 2),
-            breaches=breaches
-        )
-    
-    return results
+
+    return {"regions": results}
