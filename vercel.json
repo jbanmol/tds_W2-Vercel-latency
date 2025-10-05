@@ -6,5 +6,10 @@
   "routes": [{
     "src": "/(.*)",
     "dest": "api/index.py"
-  }]
+  }],
+  "functions": {
+    "api/index.py": {
+      "includeFiles": "api/q-vercel-latency.json"
+    }
+  }
 }
