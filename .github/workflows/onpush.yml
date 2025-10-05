@@ -1,0 +1,42 @@
+name: onpush
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  demo:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+        
+    - name: Install dependencies
+      run: |
+        pip install -r requirements.txt
+        
+    - name: 23f1001015@ds.study.iitm.ac.in
+      run: |
+        echo "Hello from IITM student!"
+        echo "Repository: ${{ github.repository }}"
+        echo "Branch: ${{ github.ref }}"
+        
+    - name: Check files
+      run: |
+        echo "Listing project files:"
+        ls -la
+        echo "API directory contents:"
+        ls -la api/
+        
+    - name: Basic validation
+      run: |
+        python -c "print('✅ Python is working!')"
+        echo "✅ Workflow completed successfully!"
