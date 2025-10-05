@@ -19,7 +19,16 @@ app.add_middleware(
 # Load the dataset once when the app starts
 # The data file should be in the same directory as this script
 DATA_FILE = Path(__file__).parent / "q-vercel-latency.json"
-df = pd.read_json(DATA_FILE)
+
+try:
+    df = pd.read_json(DATA_FILE)
+except FileNotFoundError:
+    # If file not found, create empty DataFrame with expected structure
+    df = pd.DataFrame(columns=["region", "latency_ms", "uptime_pct"])
+    print(f"Warning: Data file {DATA_FILE} not found. Using empty dataset.")
+except Exception as e:
+    print(f"Error loading data: {e}")
+    df = pd.DataFrame(columns=["region", "latency_ms", "uptime_pct"])
 
 
 @app.get("/")
