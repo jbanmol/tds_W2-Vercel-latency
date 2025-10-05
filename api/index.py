@@ -13,7 +13,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
     allow_credentials=False,
-    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_methods=["*"],
     allow_headers=["*"],
 )
 
@@ -35,6 +35,10 @@ class RegionMetrics(BaseModel):
 @app.get("/")
 def read_root():
     return {"message": "Hello, World!"}
+
+@app.options("/latency-metrics")
+def options_latency_metrics():
+    return {"message": "OK"}
 
 @app.post("/latency-metrics")
 def get_latency_metrics(request: LatencyRequest) -> Dict[str, RegionMetrics]:
