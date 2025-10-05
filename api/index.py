@@ -19,7 +19,7 @@ app.add_middleware(
 
 # Load telemetry data from the data file
 import os
-with open(os.path.join(os.path.dirname(__file__), "..", "telemetry_data.json"), "r") as f:
+with open(os.path.join(os.path.dirname(__file__), "..", "q-vercel-latency.json"), "r") as f:
     telemetry_data = json.load(f)
 
 class LatencyRequest(BaseModel):
