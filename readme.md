@@ -1,4 +1,4 @@
-# 5. Deploy a POST analytics endpoint to Vercel (1 Marks)
+Deploy a POST analytics endpoint to Vercel (1 Marks)
 
 ## 1. Problem Description
 
